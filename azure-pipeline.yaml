@@ -1,0 +1,50 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+jobs:
+- job: RunTests
+  displayName: 'Run Tests'
+  steps:
+  - script: |
+      # Commands to install dependencies and run tests
+      pip install -r requirements.txt
+      pytest test.py
+    displayName: 'Run Python Tests'
+
+- job: BuildDockerImage
+  displayName: 'Build Docker Image'
+  dependsOn: RunTests
+  condition: succeeded()
+  steps:
+  - task: Docker@2
+    inputs:
+      containerRegistry: 'your-container-registry-connection'
+      repository: 'your-docker-repository'
+      command: 'build'
+      Dockerfile: '**/Dockerfile'
+      tags: 'latest'
+  - script: |
+      # Generate requirements.txt file
+      pip freeze > requirements.txt
+    displayName: 'Generate requirements.txt file'
+
+- job: PushToDockerHub
+  displayName: 'Push Docker Image to Docker Hub'
+  dependsOn: BuildDockerImage
+  condition: succeeded()
+  steps:
+  - task: Docker@2
+    inputs:
+      containerRegistry: 'dockerHubConnection'
+      repository: 'vincezakari/qashqadeapp'
+      command: 'push'
+      tags: 'latest'
+  - script: |
+      docker login -u vincezakari -p Jblingzify007
+    displayName: 'Docker Login to Docker Hub'
+
